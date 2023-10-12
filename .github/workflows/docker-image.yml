@@ -1,0 +1,32 @@
+name: Build Docker Images
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU for Cross-Build
+        run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+      - name: Log in to Docker Hub
+        run: echo ${{ secrets.DOCKERHUB_PASSWORD }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+
+      - name: Build and Push AMD64 Image
+        run: |
+          docker buildx use default
+          docker buildx build --platform linux/amd64 -t paomb/yc-iac:${{ github.event.release.tag_name }}-amd64 .
+          docker push paomb/yc-iac:${{ github.event.release.tag_name }}-amd64
+
+      - name: Build and Push ARM64 Image
+        run: |
+          docker buildx use default
+          docker buildx build --platform linux/arm64 -t paomb/yc-iac:${{ github.event.release.tag_name }}-arm64 .
+          docker push paomb/yc-iac:${{ github.event.release.tag_name }}-arm64
